@@ -5,7 +5,7 @@ import requests
 
 AUTH_URL = "{domain}/wp-json/jwt-auth/v1/token/"
 MEDIA_URL = "{domain}/wp-json/wp/v2/media/"
-APARTMENT_URL = "{domain}/wp-json/wp/v2/{type}/"
+POST_URL = "{domain}/wp-json/wp/v2/{type}/"
 
 CODE_TOO_LARGE = 413
 CODE_CREATED = 201
@@ -33,11 +33,11 @@ class WordpressService:
         raise Exception("Wrong Authentication")
 
     @classmethod
-    def get_apartments(
+    def get_posts(
         cls, domain: str, token: str, type_url: str, page: int = 1
     ) -> dict:
         headers = {"Authorization": f"Bearer {token}"}
-        paging_url = f"{APARTMENT_URL.format_map({'domain': domain, 'type': type_url})}?page={page}"
+        paging_url = f"{POST_URL.format_map({'domain': domain, 'type': type_url})}?page={page}"
         response = requests.get(paging_url, headers=headers)
         if response.status_code == CODE_OK:
             return response.json()
@@ -61,7 +61,7 @@ class WordpressService:
         raise SomethingWrongException()
 
     @classmethod
-    def post_rent_apartment(
+    def post_post(
         cls,
         token: str,
         domain: str,
@@ -76,16 +76,16 @@ class WordpressService:
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         }
-        api_endpoint = APARTMENT_URL.format_map({"domain": domain, "type": type_url})
+        api_endpoint = POST_URL.format_map({"domain": domain, "type": type_url})
         if is_update:
             api_endpoint = f"{api_endpoint}{wp_id}/"
         response = requests.post(api_endpoint, headers=headers, data=json.dumps(body))
-        if response.status_code in (CODE_CREATED, CODE_OK):
+        if response.status_code in {CODE_CREATED, CODE_OK}:
             return response.json()
         raise SomethingWrongException()
 
     @classmethod
-    def hide_rent_apartment(
+    def hide_post(
         cls,
         domain: str,
         token: str,
@@ -97,16 +97,16 @@ class WordpressService:
             "Content-Type": "application/json",
         }
         data = json.dumps({"status": PRIVATE_STATUS})
-        rent_update = (
-            f"{APARTMENT_URL.format_map({'domain': domain,'type': type_url})}{wp_id}"
+        update = (
+            f"{POST_URL.format_map({'domain': domain,'type': type_url})}{wp_id}"
         )
-        response = requests.post(rent_update, headers=headers, data=data)
+        response = requests.post(update, headers=headers, data=data)
         if response.status_code == CODE_OK:
             return response.json()
         raise SomethingWrongException()
 
     @classmethod
-    def delete_rent_apartment(
+    def delete_post(
         cls,
         domain: str,
         token: str,
@@ -117,10 +117,10 @@ class WordpressService:
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         }
-        rent_update = (
-            f"{APARTMENT_URL.format_map({'domain': domain,'type': type_url})}{wp_id}"
+        update = (
+            f"{POST_URL.format_map({'domain': domain,'type': type_url})}{wp_id}"
         )
-        response = requests.delete(rent_update, headers=headers)
+        response = requests.delete(update, headers=headers)
         if response.status_code in (CODE_OK, CODE_ALREADY_TRASHED):
             return response.json()
         raise SomethingWrongException()
