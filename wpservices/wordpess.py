@@ -1,17 +1,15 @@
-# # -*- coding: utf-8 -*-
-import json
-import base64
 import requests
+from http import HTTPStatus
 
 AUTH_URL = "{domain}/wp-json/jwt-auth/v1/token/"
 MEDIA_URL = "{domain}/wp-json/wp/v2/media/"
 POST_URL = "{domain}/wp-json/wp/v2/{type}/"
 
-CODE_TOO_LARGE = 413
-CODE_CREATED = 201
-CODE_OK = 200
-CODE_BAD_REQUEST = 400
-CODE_ALREADY_TRASHED = 410
+CODE_TOO_LARGE = HTTPStatus.REQUEST_ENTITY_TOO_LARGE
+CODE_CREATED = HTTPStatus.CREATED
+CODE_OK = HTTPStatus.OK
+CODE_BAD_REQUEST = HTTPStatus.BAD_REQUEST
+CODE_ALREADY_TRASHED = HTTPStatus.GONE
 
 DELETE_STATUS = "trash"
 PRIVATE_STATUS = "private"
@@ -24,17 +22,17 @@ class SomethingWrongException(Exception):
 
 
 class WordpressService:
-    @classmethod
-    def get_token(cls, domain: str, username: str, password: str) -> str:
+    @staticmethod
+    def get_token(domain: str, username: str, password: str) -> str:
         data = {"username": username, "password": password}
         response = requests.post(AUTH_URL.format_map({"domain": domain}), data=data)
         if response.status_code == CODE_OK:
             return response.json()["token"]
         raise Exception("Wrong Authentication")
 
-    @classmethod
+    @staticmethod
     def get_posts(
-        cls, domain: str, token: str, type_url: str, page: int = 1
+        domain: str, token: str, type_url: str, page: int = 1
     ) -> dict:
         headers = {"Authorization": f"Bearer {token}"}
         paging_url = f"{POST_URL.format_map({'domain': domain, 'type': type_url})}?page={page}"
@@ -45,8 +43,8 @@ class WordpressService:
             raise Exception("Wrong paging")
         raise SomethingWrongException()
 
-    @classmethod
-    def post_img(cls, domain: str, token: str, img: bytes, fileName: str) -> dict:
+    @staticmethod
+    def post_img(domain: str, token: str, img: bytes, fileName: str) -> dict:
         headers = {
             "Authorization": f"Bearer {token}",
         }
@@ -60,9 +58,8 @@ class WordpressService:
             raise Exception(code=CODE_TOO_LARGE, message="File too large")
         raise SomethingWrongException()
 
-    @classmethod
+    @staticmethod
     def post_post(
-        cls,
         token: str,
         domain: str,
         type_url: str,
@@ -79,14 +76,13 @@ class WordpressService:
         api_endpoint = POST_URL.format_map({"domain": domain, "type": type_url})
         if is_update:
             api_endpoint = f"{api_endpoint}{wp_id}/"
-        response = requests.post(api_endpoint, headers=headers, data=json.dumps(body))
+        response = requests.post(api_endpoint, headers=headers, json=body)
         if response.status_code in {CODE_CREATED, CODE_OK}:
             return response.json()
         raise SomethingWrongException()
 
-    @classmethod
+    @staticmethod
     def hide_post(
-        cls,
         domain: str,
         token: str,
         wp_id: int,
@@ -96,18 +92,16 @@ class WordpressService:
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         }
-        data = json.dumps({"status": PRIVATE_STATUS})
         update = (
             f"{POST_URL.format_map({'domain': domain,'type': type_url})}{wp_id}"
         )
-        response = requests.post(update, headers=headers, data=data)
+        response = requests.post(update, headers=headers, json={"status": PRIVATE_STATUS})
         if response.status_code == CODE_OK:
             return response.json()
         raise SomethingWrongException()
 
-    @classmethod
+    @staticmethod
     def delete_post(
-        cls,
         domain: str,
         token: str,
         wp_id: int,
@@ -124,5 +118,3 @@ class WordpressService:
         if response.status_code in (CODE_OK, CODE_ALREADY_TRASHED):
             return response.json()
         raise SomethingWrongException()
-
-    # /<-- wordpress services -->
